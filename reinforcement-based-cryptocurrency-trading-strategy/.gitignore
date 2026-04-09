@@ -1,0 +1,60 @@
+# Data (download separately via Binance Vision)
+data/raw/
+data/processed/
+data/features/
+data/normalized/
+
+# Trained models and checkpoints
+models/checkpoints/
+models/final/
+
+# Logs
+logs/
+
+# Results (regenerate from code)
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables / secrets
+.env
+*.env
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+#results
+results/
+docs/
+
+#md files

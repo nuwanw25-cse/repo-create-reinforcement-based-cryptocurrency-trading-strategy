@@ -1,0 +1,36 @@
+# Core RL
+stable-baselines3[extra]
+gymnasium
+
+# Deep learning backend
+torch
+torchvision
+
+# Data processing
+pandas
+numpy
+
+# Technical indicators
+ta
+
+# Configuration
+pyyaml
+
+# Visualization
+matplotlib
+seaborn
+
+# Notebooks
+jupyter
+ipykernel
+
+# Logging
+tensorboard
+
+# Testing
+pytest
+pytest-cov
+
+# Utilities
+tqdm
+scikit-learn

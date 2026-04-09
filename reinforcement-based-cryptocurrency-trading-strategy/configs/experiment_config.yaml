@@ -1,0 +1,51 @@
+# Experiment Configuration
+
+data:
+  # Split strategy: pre-defined by month (no ratio cut within a block)
+  #   Train : Aug–Dec 2024 (153 rows) — model learns from this
+  #   Val   : Jan 2025     (31 rows)  — hyperparameter tuning / early stopping
+  #   Test  : Feb 2025     (28 rows)  — final held-out evaluation
+
+  train_files:
+    - "data/raw/BTCUSDT-1d-2024-08.csv"
+    - "data/raw/BTCUSDT-1d-2024-09.csv"
+    - "data/raw/BTCUSDT-1d-2024-10.csv"
+    - "data/raw/BTCUSDT-1d-2024-11.csv"
+    - "data/raw/BTCUSDT-1d-2024-12.csv"
+
+  val_files:
+    - "data/raw/BTCUSDT-1d-2025-01.csv"
+
+  test_files:
+    - "data/raw/BTCUSDT-1d-2025-02.csv"
+
+  processed_path: "data/processed/btcusdt_all.csv"
+  features_path: "data/features/btcusdt_all_features.csv"
+
+  # Technical indicators
+  sma_short: 10       # Short-window simple moving average
+  sma_long: 50        # Long-window simple moving average
+  rsi_period: 14      # RSI look-back period
+
+environment:
+  initial_balance: 10000.0     # Starting portfolio value in USDT
+  transaction_cost: 0.001      # 0.1% per trade (realistic Binance fee)
+  # Actions: 0=Hold, 1=Buy, 2=Sell
+
+evaluation:
+  metrics:
+    - total_return
+    - annualized_return
+    - sharpe_ratio
+    - sortino_ratio
+    - calmar_ratio
+    - max_drawdown
+    - win_rate
+
+paths:
+  models_dir: "models/"
+  logs_dir: "logs/"
+  results_dir: "results/"
+  figures_dir: "results/figures/"
+
+seed: 42
