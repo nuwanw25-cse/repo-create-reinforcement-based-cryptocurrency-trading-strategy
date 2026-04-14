@@ -1,31 +1,61 @@
 # Experiment Configuration
 
 data:
-  # Split strategy: pre-defined by month (no ratio cut within a block)
-  #   Train : Aug–Dec 2024 (153 rows) — model learns from this
-  #   Val   : Jan 2025     (31 rows)  — hyperparameter tuning / early stopping
-  #   Test  : Feb 2025     (28 rows)  — final held-out evaluation
+  # V2: 1H candles, extended date range covering all three market regimes
+  #   Train : Jan 2022 – Aug 2024 (~23,279 rows after warm-up) — bear + recovery + bull
+  #   Val   : Sep 2024            (~720 rows)  — hyperparameter tuning / early stopping
+  #   Test  : Oct–Dec 2024        (~2,208 rows) — bull run evaluation
+  interval: "1h"
 
   train_files:
-    - "data/raw/BTCUSDT-1d-2024-08.csv"
-    - "data/raw/BTCUSDT-1d-2024-09.csv"
-    - "data/raw/BTCUSDT-1d-2024-10.csv"
-    - "data/raw/BTCUSDT-1d-2024-11.csv"
-    - "data/raw/BTCUSDT-1d-2024-12.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-01.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-02.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-03.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-04.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-05.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-06.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-07.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-08.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-09.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-10.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-11.csv"
+    - "data/raw/1h/BTCUSDT-1h-2022-12.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-01.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-02.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-03.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-04.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-05.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-06.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-07.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-08.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-09.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-10.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-11.csv"
+    - "data/raw/1h/BTCUSDT-1h-2023-12.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-01.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-02.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-03.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-04.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-05.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-06.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-07.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-08.csv"
 
   val_files:
-    - "data/raw/BTCUSDT-1d-2025-01.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-09.csv"
 
   test_files:
-    - "data/raw/BTCUSDT-1d-2025-02.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-10.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-11.csv"
+    - "data/raw/1h/BTCUSDT-1h-2024-12.csv"
 
   processed_path: "data/processed/btcusdt_all.csv"
   features_path: "data/features/btcusdt_all_features.csv"
 
-  # Technical indicators
-  sma_short: 10       # Short-window simple moving average
-  sma_long: 50        # Long-window simple moving average
-  rsi_period: 14      # RSI look-back period
+  # Technical indicators (Option A — candle-count periods, unchanged from V1)
+  sma_short: 10       # 10-candle SMA  (~10 hours at 1H resolution)
+  sma_long: 50        # 50-candle SMA  (~2 days at 1H resolution)
+  rsi_period: 14      # RSI look-back  (~14 hours at 1H resolution)
 
 environment:
   initial_balance: 10000.0     # Starting portfolio value in USDT
