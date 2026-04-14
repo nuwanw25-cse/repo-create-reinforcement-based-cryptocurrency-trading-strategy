@@ -1,34 +1,37 @@
-# DQN Agent Hyperparameters
+# DQN Agent Hyperparameters — V2 (1H candles)
 # Ref: Stable-Baselines3 DQN documentation
+# V2 changes annotated with (was: <V1 value>)
 
 model:
   policy: "MlpPolicy"           # Multi-layer perceptron policy
-  learning_rate: 1.0e-4         # Adam optimizer learning rate
-  buffer_size: 50000            # Replay buffer capacity
-  learning_starts: 1000         # Steps before training begins
-  batch_size: 32                # Mini-batch size for gradient updates
-  tau: 1.0                      # Soft update coefficient for target network
-  gamma: 0.99                   # Discount factor for future rewards
-  train_freq: 4                 # Update model every N steps
-  gradient_steps: 1             # Gradient steps per update
-  target_update_interval: 1000  # Steps between target network hard updates
-  exploration_fraction: 0.3     # Fraction of training with epsilon decay
-  exploration_initial_eps: 1.0  # Starting epsilon (fully random)
-  exploration_final_eps: 0.05   # Final epsilon (5% random actions)
+  learning_rate: 1.0e-4         # Adam optimizer learning rate — unchanged
+  buffer_size: 500000           # Replay buffer (was: 50000) — ~22 full val episodes
+  learning_starts: 5000         # Steps before training begins (was: 1000)
+  batch_size: 32                # Mini-batch size — unchanged
+  tau: 1.0                      # Hard target network copy — unchanged
+  gamma: 0.9996                 # Discount factor (was: 0.99)
+                                # 0.9996^720 ≈ 0.75 preserves ~30-day planning horizon
+  train_freq: 4                 # Update every N steps — unchanged
+  gradient_steps: 1             # Gradient steps per update — unchanged
+  target_update_interval: 10000 # Target network update interval (was: 1000)
+  exploration_fraction: 0.3     # Fraction of training with epsilon decay — unchanged
+  exploration_initial_eps: 1.0  # Starting epsilon — unchanged
+  exploration_final_eps: 0.02   # Final epsilon (was: 0.05) — tighter for smaller rewards
   verbose: 1
 
   # Neural network architecture (hidden layers for MlpPolicy)
   policy_kwargs:
-    net_arch: [64, 64]          # Two hidden layers of 64 units each
+    net_arch: [64, 64]          # Two hidden layers — unchanged (state is still 11D)
 
 training:
-  total_timesteps: 100000       # Total environment steps for training
-  eval_freq: 5000               # Evaluate on validation set every N steps
-  n_eval_episodes: 1            # Episodes per evaluation
-  save_freq: 10000              # Save checkpoint every N steps
-  patience: 5                   # Evals with no improvement before early stop
+  total_timesteps: 500000       # Total steps (was: 100000) — ~22 passes through training data
+  eval_freq: 25000              # Evaluate every N steps (was: 5000) — ~20 evals total
+  n_eval_episodes: 1            # Episodes per evaluation — unchanged
+  save_freq: 50000              # Checkpoint every N steps (was: 10000)
+  patience: 5                   # Evals with no improvement before early stop — unchanged
   seed: 42
 
 environment:
-  initial_balance: 10000.0      # Starting cash in USDT
-  transaction_cost: 0.001       # 0.1% fee per Buy or Sell
+  initial_balance: 10000.0      # Starting cash in USDT — unchanged
+  transaction_cost: 0.001       # 0.1% fee per Buy or Sell — unchanged
+  periods_per_year: 8760        # 365 × 24 for 1H candles (was: 252 daily)
