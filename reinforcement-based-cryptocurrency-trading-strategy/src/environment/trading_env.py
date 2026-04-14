@@ -252,15 +252,15 @@ class TradingEnv(gym.Env):
         row = self._df.iloc[idx]
 
         market = np.array([
-            row["open"],
-            row["high"],
-            row["low"],
-            row["close"],
-            row["volume"],
-            row["sma_10"],
-            row["sma_50"],
-            row["rsi"] / 100.0,                             # RSI: 0–100 → 0–1
-            np.clip((row["momentum_5"] + 100.0) / 200.0, 0.0, 1.0),  # momentum → 0–1
+            np.clip(row["open"],    0.0, 1.0),   # clip: test prices may exceed training max
+            np.clip(row["high"],    0.0, 1.0),
+            np.clip(row["low"],     0.0, 1.0),
+            np.clip(row["close"],   0.0, 1.0),
+            np.clip(row["volume"],  0.0, 1.0),
+            np.clip(row["sma_10"],  0.0, 1.0),
+            np.clip(row["sma_50"],  0.0, 1.0),
+            np.clip(row["rsi"] / 100.0, 0.0, 1.0),                     # RSI: 0–100 → 0–1
+            np.clip((row["momentum_5"] + 100.0) / 200.0, 0.0, 1.0),    # momentum → 0–1
         ], dtype=np.float32)
 
         # Agent state features
