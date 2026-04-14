@@ -1,7 +1,7 @@
 """
 Data loader for Binance Vision OHLCV CSV files.
 
-Binance Vision daily kline columns (no header row):
+Binance Vision kline columns (no header row):
   0  open_time               Unix timestamp (candle open) — see note below
   1  open                    Open price (USDT)
   2  high                    High price (USDT)
@@ -21,6 +21,9 @@ Timestamp format change (Binance Vision):
   Files up to 2024-12  → 13-digit milliseconds  (e.g. 1733011200000)
   Files from 2025-01   → 16-digit microseconds  (e.g. 1735689600000000)
   The loader detects this automatically and normalises to milliseconds.
+
+V2 note: switched from daily (1D) to hourly (1H) candles.
+  validate_continuity() uses freq="h" to check for missing hourly candles.
 """
 import pandas as pd
 from pathlib import Path
@@ -97,26 +100,26 @@ def load_multiple(filepaths: List[Union[str, Path]]) -> pd.DataFrame:
 
 def validate_continuity(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Check for missing dates in the daily time series.
+    Check for missing hourly candles in the time series.
 
-    Prints a warning for each gap found. Daily crypto markets run 24/7
-    so every calendar day should have a candle.
+    Prints a warning for each gap found. Crypto markets run 24/7 so every
+    hour should have a candle.
 
     Returns the original DataFrame unchanged (gaps are reported, not dropped).
     """
     expected = pd.date_range(
         start=df.index.min(),
         end=df.index.max(),
-        freq="D",
+        freq="h",
         tz="UTC",
     )
     missing = expected.difference(df.index)
 
     if missing.empty:
-        print(f"Continuity check passed: {len(df)} rows, no missing dates.")
+        print(f"Continuity check passed: {len(df)} rows, no missing hours.")
     else:
-        print(f"WARNING: {len(missing)} missing date(s) detected:")
+        print(f"WARNING: {len(missing)} missing hour(s) detected:")
         for d in missing:
-            print(f"  {d.date()}")
+            print(f"  {d}")
 
     return df
