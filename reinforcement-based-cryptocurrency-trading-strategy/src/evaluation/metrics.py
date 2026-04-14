@@ -4,7 +4,7 @@ Financial performance metrics for strategy evaluation.
 All functions accept a ``portfolio`` pd.Series of portfolio values at each
 timestep, or a ``returns`` pd.Series of per-step percentage returns.
 
-Daily data is assumed throughout (``periods_per_year=252`` trading days).
+1H candle data is assumed throughout (``periods_per_year=8760``, i.e. 365 × 24).
 
 Metrics implemented:
     total_return      — overall gain/loss as a fraction
@@ -49,7 +49,7 @@ def total_return(portfolio: pd.Series) -> float:
     return float(portfolio.iloc[-1] / portfolio.iloc[0] - 1.0)
 
 
-def annualized_return(portfolio: pd.Series, periods_per_year: int = 252) -> float:
+def annualized_return(portfolio: pd.Series, periods_per_year: int = 8760) -> float:
     """
     Compound annualised growth rate (CAGR).
 
@@ -85,7 +85,7 @@ def max_drawdown(portfolio: pd.Series) -> float:
 def sharpe_ratio(
     returns: pd.Series,
     risk_free: float = 0.0,
-    periods_per_year: int = 252,
+    periods_per_year: int = 8760,
 ) -> float:
     """
     Annualised Sharpe ratio.
@@ -95,7 +95,7 @@ def sharpe_ratio(
     Args:
         returns:         Per-step fractional returns (e.g. from pct_change()).
         risk_free:       Risk-free rate per step (default 0 — no adjustment).
-        periods_per_year: Trading periods in a year (252 for daily).
+        periods_per_year: Trading periods in a year (8760 for 1H candles).
 
     Returns:
         float — Sharpe ratio.  NaN if std is zero.
@@ -113,7 +113,7 @@ def sharpe_ratio(
 def sortino_ratio(
     returns: pd.Series,
     risk_free: float = 0.0,
-    periods_per_year: int = 252,
+    periods_per_year: int = 8760,
 ) -> float:
     """
     Annualised Sortino ratio.
@@ -136,7 +136,7 @@ def sortino_ratio(
     return float(excess.mean() / downside_std * np.sqrt(periods_per_year))
 
 
-def calmar_ratio(portfolio: pd.Series, periods_per_year: int = 252) -> float:
+def calmar_ratio(portfolio: pd.Series, periods_per_year: int = 8760) -> float:
     """
     Calmar ratio: annualised return divided by absolute max drawdown.
 
@@ -170,7 +170,7 @@ def win_rate(returns: pd.Series) -> float:
 def compute_all(
     portfolio: pd.Series,
     risk_free: float = 0.0,
-    periods_per_year: int = 252,
+    periods_per_year: int = 8760,
 ) -> dict:
     """
     Compute and return all metrics as an ordered dictionary.
@@ -178,7 +178,7 @@ def compute_all(
     Args:
         portfolio:       Series of portfolio values (one per trading step).
         risk_free:       Per-step risk-free rate (default 0).
-        periods_per_year: Trading periods in a year (default 252 for daily).
+        periods_per_year: Trading periods in a year (default 8760 for 1H candles).
 
     Returns:
         dict with keys:
