@@ -14,17 +14,18 @@ from src.environment.trading_env import TradingEnv
 def simple_df():
     """10-row synthetic normalised feature DataFrame with steadily rising price."""
     n = 10
-    close = np.linspace(0.1, 0.5, n)   # price goes from 0.1 to 0.5
+    close = np.linspace(0.1, 0.5, n)   # raw close price for portfolio tracking
     data = {
-        "open":       close * 0.99,
-        "high":       close * 1.01,
-        "low":        close * 0.98,
-        "close":      close,
-        "volume":     np.full(n, 0.5),
-        "sma_10":     close * 0.97,
-        "sma_50":     close * 0.95,
-        "rsi":        np.full(n, 60.0),       # 0–100 range; env divides by 100
-        "momentum_5": np.full(n, 5.0),         # env applies (x+100)/200 clip
+        "close":        close,
+        "close_return": np.full(n, 0.5),  # pre-normalised return features in [0, 1]
+        "open_gap":     np.full(n, 0.5),
+        "high_dev":     np.full(n, 0.6),
+        "low_dev":      np.full(n, 0.4),
+        "log_volume":   np.full(n, 0.5),
+        "sma_10_dev":   np.full(n, 0.5),
+        "sma_50_dev":   np.full(n, 0.5),
+        "rsi":          np.full(n, 60.0),   # 0–100; env divides by 100
+        "momentum_5":   np.full(n, 5.0),    # env applies (x+100)/200
     }
     idx = pd.date_range("2024-01-01", periods=n, freq="D", tz="UTC")
     return pd.DataFrame(data, index=idx)
@@ -108,13 +109,19 @@ def test_env_step_buy_sell(env, env_config):
 def test_transaction_cost_applied(env_config):
     """Transaction cost must be strictly deducted on Buy and Sell."""
     n = 5
-    # Flat price — portfolio return should equal exactly -2 * transaction_cost
-    close = np.full(n, 0.3)
+    # Flat close price — portfolio return should equal exactly (1-tc)^2 - 1
+    close_price = np.full(n, 0.3)
     data = {
-        "open": close, "high": close, "low": close, "close": close,
-        "volume": np.full(n, 0.5),
-        "sma_10": close, "sma_50": close,
-        "rsi": np.full(n, 50.0), "momentum_5": np.zeros(n),
+        "close":        close_price,
+        "close_return": np.full(n, 0.5),
+        "open_gap":     np.full(n, 0.5),
+        "high_dev":     np.full(n, 0.6),
+        "low_dev":      np.full(n, 0.4),
+        "log_volume":   np.full(n, 0.5),
+        "sma_10_dev":   np.full(n, 0.5),
+        "sma_50_dev":   np.full(n, 0.5),
+        "rsi":          np.full(n, 50.0),
+        "momentum_5":   np.zeros(n),
     }
     idx = pd.date_range("2024-01-01", periods=n, freq="D", tz="UTC")
     df_flat = pd.DataFrame(data, index=idx)

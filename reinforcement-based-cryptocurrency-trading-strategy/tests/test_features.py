@@ -3,7 +3,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.data.features import add_sma, add_rsi, add_momentum, build_features, drop_warmup
+from src.data.features import (
+    add_sma, add_rsi, add_momentum, build_features, drop_warmup,
+    add_returns_features, add_sma_deviations,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -130,8 +133,87 @@ def test_momentum_is_pct_change(ohlcv_df):
 def test_build_features_adds_all_columns(ohlcv_df):
     config = {"sma_short": 10, "sma_long": 50, "rsi_period": 14}
     df = build_features(ohlcv_df.copy(), config)
-    for col in ["sma_10", "sma_50", "rsi", "momentum_5"]:
+    for col in [
+        "sma_10", "sma_50", "rsi", "momentum_5",
+        "close_return", "open_gap", "high_dev", "low_dev", "log_volume",
+        "sma_10_dev", "sma_50_dev",
+    ]:
         assert col in df.columns, f"Expected column {col!r} not found"
+
+
+# --------------------------------------------------------------------------- #
+# add_returns_features tests
+# --------------------------------------------------------------------------- #
+
+def test_add_returns_features_columns(ohlcv_df):
+    df = add_returns_features(ohlcv_df.copy())
+    for col in ["close_return", "open_gap", "high_dev", "low_dev", "log_volume"]:
+        assert col in df.columns, f"Missing column {col!r}"
+
+
+def test_close_return_formula(ohlcv_df):
+    df = add_returns_features(ohlcv_df.copy())
+    i = 5
+    expected = ohlcv_df["close"].iloc[i] / ohlcv_df["close"].iloc[i - 1] - 1
+    assert df["close_return"].iloc[i] == pytest.approx(expected, rel=1e-9)
+
+
+def test_high_dev_nonneg(ohlcv_df):
+    """high >= close in all OHLCV rows, so high_dev must be >= 0."""
+    df = add_returns_features(ohlcv_df.copy())
+    assert (df["high_dev"] >= 0).all(), f"high_dev min: {df['high_dev'].min()}"
+
+
+def test_low_dev_nonpos(ohlcv_df):
+    """low <= close in all OHLCV rows, so low_dev must be <= 0."""
+    df = add_returns_features(ohlcv_df.copy())
+    assert (df["low_dev"] <= 0).all(), f"low_dev max: {df['low_dev'].max()}"
+
+
+def test_log_volume_nonneg(ohlcv_df):
+    """log1p(volume) is always >= 0 for non-negative volume."""
+    df = add_returns_features(ohlcv_df.copy())
+    assert (df["log_volume"] >= 0).all()
+
+
+def test_returns_warmup_nan(ohlcv_df):
+    """Row 0 must be NaN for close_return and open_gap; not NaN for high_dev/low_dev."""
+    df = add_returns_features(ohlcv_df.copy())
+    assert np.isnan(df["close_return"].iloc[0])
+    assert np.isnan(df["open_gap"].iloc[0])
+    assert not np.isnan(df["high_dev"].iloc[0])
+    assert not np.isnan(df["low_dev"].iloc[0])
+    assert not np.isnan(df["log_volume"].iloc[0])
+
+
+# --------------------------------------------------------------------------- #
+# add_sma_deviations tests
+# --------------------------------------------------------------------------- #
+
+def test_add_sma_deviations_columns(ohlcv_df):
+    df = add_sma(ohlcv_df.copy(), window=10)
+    df = add_sma(df, window=50)
+    df = add_sma_deviations(df, sma_short=10, sma_long=50)
+    assert "sma_10_dev" in df.columns
+    assert "sma_50_dev" in df.columns
+
+
+def test_sma_deviation_formula(ohlcv_df):
+    df = add_sma(ohlcv_df.copy(), window=10)
+    df = add_sma(df, window=50)
+    df = add_sma_deviations(df, sma_short=10, sma_long=50)
+    i = 60
+    expected = (ohlcv_df["close"].iloc[i] - df["sma_10"].iloc[i]) / ohlcv_df["close"].iloc[i]
+    assert df["sma_10_dev"].iloc[i] == pytest.approx(expected, rel=1e-9)
+
+
+def test_sma_deviation_sign_rising(ohlcv_df):
+    """On a rising price series close is above SMA, so sma_dev should be positive."""
+    df = add_sma(ohlcv_df.copy(), window=10)
+    df = add_sma(df, window=50)
+    df = add_sma_deviations(df, sma_short=10, sma_long=50)
+    settled = df["sma_10_dev"].iloc[20:].dropna()
+    assert (settled > 0).all(), "sma_10_dev should be positive when close > SMA"
 
 
 def test_drop_warmup_removes_nan_rows(ohlcv_df):
