@@ -3,10 +3,11 @@ Custom Gymnasium trading environment for BTC/USDT daily trading.
 
 State (11D, all in [0, 1] or bounded):
     Market features (from normalized feature CSV):
-        open, high, low, close, volume  — MinMax-scaled to [0, 1]
-        sma_10, sma_50                  — price-scale normalized
-        rsi                             — divided by 100 → [0, 1]
-        momentum_5                      — clipped and normalized → [0, 1]
+        close_return, open_gap, high_dev, low_dev  — return-based, MinMax-scaled
+        log_volume                                 — log1p then MinMax-scaled
+        sma_10_dev, sma_50_dev                     — (close−sma)/close, clip-shifted
+        rsi                                        — divided by 100 → [0, 1]
+        momentum_5                                 — clipped and normalized → [0, 1]
     Agent state:
         position      — 0 (cash) or 1 (holding BTC)
         portfolio_pct — portfolio value relative to initial balance,
@@ -41,8 +42,14 @@ import pandas as pd
 from gymnasium import spaces
 
 
-# Columns expected in the feature DataFrame (all normalized except rsi/momentum)
-MARKET_COLS = ["open", "high", "low", "close", "volume", "sma_10", "sma_50", "rsi", "momentum_5"]
+# Observation columns — all normalized to [0, 1] by the data pipeline (except rsi/momentum
+# which are transformed in _get_obs).  A ``close`` column must also be present in the
+# DataFrame for portfolio value tracking, but it is not part of the observation.
+MARKET_COLS = [
+    "close_return", "open_gap", "high_dev", "low_dev", "log_volume",
+    "sma_10_dev", "sma_50_dev",
+    "rsi", "momentum_5",
+]
 
 
 class TradingEnv(gym.Env):
@@ -75,8 +82,9 @@ class TradingEnv(gym.Env):
         """
         super().__init__()
 
-        # Validate required columns
-        missing = [c for c in MARKET_COLS if c not in df.columns]
+        # Validate required columns: MARKET_COLS for observation + close for price tracking
+        required = MARKET_COLS + ["close"]
+        missing = [c for c in required if c not in df.columns]
         if missing:
             raise ValueError(
                 f"TradingEnv: DataFrame is missing required columns: {missing}\n"
@@ -85,7 +93,7 @@ class TradingEnv(gym.Env):
 
         self._original_index = df.index          # preserve DatetimeIndex for trace alignment
         self._df = df.reset_index(drop=True)     # integer index for fast iloc
-        self._prices = df["close"].values        # raw normalized prices (kept for portfolio calc)
+        self._prices = df["close"].values        # raw close prices for portfolio arithmetic
         self._n_steps = len(df)
 
         self._initial_balance: float = float(config.get("initial_balance", 10_000.0))
@@ -241,26 +249,26 @@ class TradingEnv(gym.Env):
         Build the observation vector for the current step.
 
         Returns a float32 array of shape (11,):
-            [open, high, low, close, volume,   # already in [0, 1] from normalize()
-             sma_10, sma_50,                   # already in [0, 1]
-             rsi_norm,                         # rsi / 100  → [0, 1]
-             momentum_norm,                    # (momentum + 100) / 200 → [0, 1]
-             position,                         # 0 or 1
-             portfolio_pct]                    # portfolio / (2 * initial) → [0, 1]
+            [close_return, open_gap, high_dev, low_dev, log_volume,  # already in [0,1]
+             sma_10_dev, sma_50_dev,                                  # already in [0,1]
+             rsi_norm,                                                # rsi / 100 → [0,1]
+             momentum_norm,                                           # (mom+100)/200 → [0,1]
+             position,                                                # 0 or 1
+             portfolio_pct]                                           # portfolio/(2*initial)
         """
         idx = min(self._current_step, self._n_steps - 1)
         row = self._df.iloc[idx]
 
         market = np.array([
-            np.clip(row["open"],    0.0, 1.0),   # clip: test prices may exceed training max
-            np.clip(row["high"],    0.0, 1.0),
-            np.clip(row["low"],     0.0, 1.0),
-            np.clip(row["close"],   0.0, 1.0),
-            np.clip(row["volume"],  0.0, 1.0),
-            np.clip(row["sma_10"],  0.0, 1.0),
-            np.clip(row["sma_50"],  0.0, 1.0),
-            np.clip(row["rsi"] / 100.0, 0.0, 1.0),                     # RSI: 0–100 → 0–1
-            np.clip((row["momentum_5"] + 100.0) / 200.0, 0.0, 1.0),    # momentum → 0–1
+            np.clip(row["close_return"], 0.0, 1.0),
+            np.clip(row["open_gap"],     0.0, 1.0),
+            np.clip(row["high_dev"],     0.0, 1.0),
+            np.clip(row["low_dev"],      0.0, 1.0),
+            np.clip(row["log_volume"],   0.0, 1.0),
+            np.clip(row["sma_10_dev"],   0.0, 1.0),
+            np.clip(row["sma_50_dev"],   0.0, 1.0),
+            np.clip(row["rsi"] / 100.0, 0.0, 1.0),
+            np.clip((row["momentum_5"] + 100.0) / 200.0, 0.0, 1.0),
         ], dtype=np.float32)
 
         # Agent state features

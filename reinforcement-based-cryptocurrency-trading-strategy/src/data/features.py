@@ -63,6 +63,48 @@ def add_momentum(df: pd.DataFrame, period: int = 5) -> pd.DataFrame:
     return df
 
 
+def add_returns_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add scale-invariant return and deviation features derived from OHLCV.
+
+    These features are stationary and do not depend on the absolute price
+    level, so they generalise to price regimes unseen during training.
+
+    Columns added:
+        close_return  — per-step % price change; NaN on row 0
+        open_gap      — (open − prev_close) / prev_close; NaN on row 0
+        high_dev      — (high − close) / close; always >= 0
+        low_dev       — (low  − close) / close; always <= 0
+        log_volume    — log1p(volume); log-compresses the heavy right tail
+    """
+    df = df.copy()
+    df["close_return"] = df["close"].pct_change()
+    df["open_gap"]     = (df["open"] - df["close"].shift(1)) / df["close"].shift(1)
+    df["high_dev"]     = (df["high"] - df["close"]) / df["close"]
+    df["low_dev"]      = (df["low"]  - df["close"]) / df["close"]
+    df["log_volume"]   = np.log1p(df["volume"])
+    return df
+
+
+def add_sma_deviations(
+    df: pd.DataFrame,
+    sma_short: int = 10,
+    sma_long: int = 50,
+) -> pd.DataFrame:
+    """
+    Add SMA deviation features: (close − sma) / close.
+
+    Must be called after add_sma() so sma_{window} columns already exist.
+
+    Columns added: sma_{sma_short}_dev, sma_{sma_long}_dev
+    Positive → close above the moving average (bullish); negative → below.
+    """
+    df = df.copy()
+    df[f"sma_{sma_short}_dev"] = (df["close"] - df[f"sma_{sma_short}"]) / df["close"]
+    df[f"sma_{sma_long}_dev"]  = (df["close"] - df[f"sma_{sma_long}"])  / df["close"]
+    return df
+
+
 def drop_warmup(df: pd.DataFrame) -> pd.DataFrame:
     """
     Drop leading rows that contain NaN from indicator warm-up periods.
@@ -101,11 +143,17 @@ def build_features(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     df = add_sma(df, window=sma_long)
     df = add_rsi(df, period=rsi_period)
     df = add_momentum(df, period=5)
+    df = add_returns_features(df)
+    df = add_sma_deviations(df, sma_short=sma_short, sma_long=sma_long)
 
-    feature_cols = [f"sma_{sma_short}", f"sma_{sma_long}", "rsi", "momentum_5"]
-    n_nan = df[feature_cols].isna().any(axis=1).sum()
+    all_indicator_cols = [
+        f"sma_{sma_short}", f"sma_{sma_long}", "rsi", "momentum_5",
+        "close_return", "open_gap", "high_dev", "low_dev", "log_volume",
+        f"sma_{sma_short}_dev", f"sma_{sma_long}_dev",
+    ]
+    n_nan = df[all_indicator_cols].isna().any(axis=1).sum()
     print(
-        f"build_features: added {feature_cols}  |  "
+        f"build_features: added {len(all_indicator_cols)} indicator columns  |  "
         f"{n_nan} warm-up row(s) contain NaN (drop from train before use)"
     )
 

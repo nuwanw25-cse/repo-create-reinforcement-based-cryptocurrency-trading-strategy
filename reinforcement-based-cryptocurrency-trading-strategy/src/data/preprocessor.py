@@ -13,9 +13,18 @@ from typing import Tuple
 from sklearn.preprocessing import MinMaxScaler
 
 
-# Columns that will be normalized
-PRICE_COLUMNS = ["open", "high", "low", "close"]
-VOLUME_COLUMNS = ["volume"]
+# Return-based features: MinMaxScaler fit on training fractional returns
+RETURN_COLS = ["close_return", "open_gap", "high_dev", "low_dev"]
+
+# Log-volume: MinMaxScaler fit on training log1p(volume)
+LOG_VOL_COL = ["log_volume"]
+
+# SMA deviations: clip to symmetric range then shift to [0, 1] — no scaler needed
+# key = column name, value = half-range for clipping (e.g. 0.2 → clip to ±0.2)
+SMA_DEV_PARAMS = {
+    "sma_10_dev": 0.2,
+    "sma_50_dev": 0.3,
+}
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
@@ -110,16 +119,23 @@ def normalize(
     test: pd.DataFrame,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
     """
-    Min-Max normalize price and volume columns.
+    Normalize return-based and log-volume features to [0, 1].
 
-    Scalers are fit exclusively on the training set to prevent leakage,
+    All scalers are fit exclusively on the training set to prevent leakage,
     then applied identically to val and test.
+
+    Features normalized:
+        RETURN_COLS   — fractional return features; MinMaxScaler on training
+        LOG_VOL_COL   — log1p(volume); MinMaxScaler on training log-volume
+        SMA_DEV_PARAMS — SMA deviations; clip to symmetric range, shift to [0,1]
+
+    Raw OHLCV columns (open, high, low, close, volume) and indicator columns
+    (rsi, momentum_5) are left unchanged in the output.
 
     Returns:
         (train_norm, val_norm, test_norm, scalers)
 
-        scalers is a dict {"price": MinMaxScaler, "volume": MinMaxScaler}
-        — save these for inverse-transforming results back to USDT values.
+        scalers is a dict {"returns": MinMaxScaler, "log_volume": MinMaxScaler}
     """
     train = train.copy()
     val = val.copy()
@@ -127,23 +143,29 @@ def normalize(
 
     scalers = {}
 
-    # Price scaler — fit on train open/high/low/close jointly so their
-    # relative relationships (e.g. high > close) are preserved after scaling
-    price_scaler = MinMaxScaler()
-    train[PRICE_COLUMNS] = price_scaler.fit_transform(train[PRICE_COLUMNS])
-    val[PRICE_COLUMNS] = price_scaler.transform(val[PRICE_COLUMNS])
-    test[PRICE_COLUMNS] = price_scaler.transform(test[PRICE_COLUMNS])
-    scalers["price"] = price_scaler
+    # Return-based features (close_return, open_gap, high_dev, low_dev)
+    present_return = [c for c in RETURN_COLS if c in train.columns]
+    if present_return:
+        returns_scaler = MinMaxScaler()
+        train[present_return] = returns_scaler.fit_transform(train[present_return])
+        val[present_return]   = returns_scaler.transform(val[present_return])
+        test[present_return]  = returns_scaler.transform(test[present_return])
+        scalers["returns"] = returns_scaler
 
-    # Volume scaler — separate scaler since volume has a different scale
-    volume_scaler = MinMaxScaler()
-    train[VOLUME_COLUMNS] = volume_scaler.fit_transform(train[VOLUME_COLUMNS])
-    val[VOLUME_COLUMNS] = volume_scaler.transform(val[VOLUME_COLUMNS])
-    test[VOLUME_COLUMNS] = volume_scaler.transform(test[VOLUME_COLUMNS])
-    scalers["volume"] = volume_scaler
+    # Log-volume
+    present_log_vol = [c for c in LOG_VOL_COL if c in train.columns]
+    if present_log_vol:
+        log_vol_scaler = MinMaxScaler()
+        train[present_log_vol] = log_vol_scaler.fit_transform(train[present_log_vol])
+        val[present_log_vol]   = log_vol_scaler.transform(val[present_log_vol])
+        test[present_log_vol]  = log_vol_scaler.transform(test[present_log_vol])
+        scalers["log_volume"] = log_vol_scaler
 
-    print(
-        "normalize: price and volume scaled to [0, 1] "
-        "using training-set statistics only."
-    )
+    # SMA deviations: clip to ±half_range then shift to [0, 1]
+    for col, half_range in SMA_DEV_PARAMS.items():
+        if col in train.columns:
+            for ds in [train, val, test]:
+                ds[col] = (ds[col].clip(-half_range, half_range) + half_range) / (2 * half_range)
+
+    print("normalize: return features and log-volume scaled to [0, 1] using training-set statistics.")
     return train, val, test, scalers

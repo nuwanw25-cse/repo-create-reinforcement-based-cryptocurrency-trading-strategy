@@ -117,25 +117,6 @@ def run(config_path: Path = CONFIG_PATH) -> dict:
         train_feat, val_feat, test_feat
     )
 
-    # normalize() scales OHLCV + volume.  SMA columns are price-scale indicators
-    # and must also be normalized.  Use the close-column min/max from the already-
-    # fitted price scaler so the relative relationship between close and SMA is
-    # preserved after scaling.
-    price_scaler = scalers["price"]
-    close_idx = 3          # PRICE_COLUMNS order: open=0, high=1, low=2, close=3
-    close_min = price_scaler.data_min_[close_idx]
-    close_range = price_scaler.data_max_[close_idx] - close_min
-
-    sma_cols = [c for c in [f"sma_{feat_cfg['sma_short']}", f"sma_{feat_cfg['sma_long']}"]
-                if c in train_norm.columns]
-    for ds in [train_norm, val_norm, test_norm]:
-        for col in sma_cols:
-            ds[col] = ((ds[col] - close_min) / close_range).clip(0.0, 1.0)
-
-    if sma_cols:
-        print(f"normalize: SMA columns {sma_cols} scaled using close-price range "
-              f"[{close_min:.2f}, {close_min + close_range:.2f}].")
-
     # Save fully-normalised feature CSVs — these are the input for TradingEnv
     normalized_dir = Path("data/normalized")
     normalized_dir.mkdir(parents=True, exist_ok=True)
