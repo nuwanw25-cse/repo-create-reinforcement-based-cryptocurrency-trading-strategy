@@ -117,6 +117,19 @@ ok "All tests passed — $PASSED"
 
 # ── 4. Run data pipeline ──────────────────────────────────────────────────────
 info "Step 4/6 — Running data pipeline ..."
+
+# Explicitly return to repo root — pytest or venv activation can shift CWD
+cd "$REPO_DIR"
+
+# Sanity-check the first required file before handing off to Python
+FIRST_FILE="$RAW_DATA_DIR/BTCUSDT-1h-2022-01.csv"
+if [[ ! -f "$FIRST_FILE" ]]; then
+    fail "Expected file not found: $FIRST_FILE
+  Files must be directly inside $RAW_DATA_DIR/ (not in a sub-folder).
+  Current contents of $RAW_DATA_DIR/:
+$(ls "$RAW_DATA_DIR"/ | head -10)"
+fi
+
 python -m src.data.pipeline
 ok "Data pipeline complete"
 
