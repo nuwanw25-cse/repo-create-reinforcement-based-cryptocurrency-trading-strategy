@@ -39,12 +39,14 @@ fi
 if [[ -n "$DATA_SOURCE" ]]; then
     info "Copying raw data from $DATA_SOURCE ..."
     cp -r "$DATA_SOURCE"/. "$RAW_DATA_DIR/"
-    ok "Raw data copied ($(ls "$RAW_DATA_DIR"/*.csv 2>/dev/null | wc -l | tr -d ' ') CSV files)"
+    ok "Raw data copied ($(find "$RAW_DATA_DIR" -maxdepth 1 -name "*.csv" | wc -l | tr -d ' ') CSV files)"
 fi
 
 # ── 1. Check raw data exists ──────────────────────────────────────────────────
 info "Step 1/6 — Checking raw data ..."
-CSV_COUNT=$(ls "$RAW_DATA_DIR"/*.csv 2>/dev/null | wc -l | tr -d ' ')
+# Use find instead of ls so the command returns 0 even when no files match
+# (ls *.csv exits non-zero when empty, which trips set -e / pipefail)
+CSV_COUNT=$(find "$RAW_DATA_DIR" -maxdepth 1 -name "*.csv" | wc -l | tr -d ' ')
 if [[ "$CSV_COUNT" -eq 0 ]]; then
     echo ""
     printf "${RED}[FAIL]${NC} No CSV files found in %s\n" "$RAW_DATA_DIR"
@@ -120,7 +122,7 @@ ok "Data pipeline complete"
 
 # Verify expected output directories
 for dir in data/processed data/features data/normalized; do
-    FILE_COUNT=$(ls "$dir"/*.csv 2>/dev/null | wc -l | tr -d ' ')
+    FILE_COUNT=$(find "$dir" -maxdepth 1 -name "*.csv" | wc -l | tr -d ' ')
     if [[ "$FILE_COUNT" -eq 0 ]]; then
         fail "Pipeline did not produce files in $dir/"
     fi
