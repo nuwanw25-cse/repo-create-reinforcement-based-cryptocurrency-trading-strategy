@@ -10,10 +10,10 @@ set -euo pipefail
 
 # ── Colours ──────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-ok()   { echo -e "${GREEN}[OK]${NC} $*"; }
-info() { echo -e "${YELLOW}[..] $*${NC}"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
-fail() { echo -e "${RED}[FAIL]${NC} $*"; exit 1; }
+ok()   { printf "${GREEN}[OK]${NC} %s\n" "$*"; }
+info() { printf "${YELLOW}[..] %s${NC}\n" "$*"; }
+warn() { printf "${YELLOW}[WARN] %s${NC}\n" "$*"; }
+fail() { printf "${RED}[FAIL]${NC} %s\n" "$*"; exit 1; }
 
 RAW_DATA_DIR="data/raw/1h"
 
@@ -47,7 +47,7 @@ info "Step 1/6 — Checking raw data ..."
 CSV_COUNT=$(ls "$RAW_DATA_DIR"/*.csv 2>/dev/null | wc -l | tr -d ' ')
 if [[ "$CSV_COUNT" -eq 0 ]]; then
     echo ""
-    echo -e "${RED}[FAIL]${NC} No CSV files found in $RAW_DATA_DIR/"
+    printf "${RED}[FAIL]${NC} No CSV files found in %s\n" "$RAW_DATA_DIR"
     echo ""
     echo "  This project requires 36 monthly BTC/USDT 1-hour candle files"
     echo "  from Binance Vision (Jan 2022 – Dec 2024)."
@@ -167,7 +167,7 @@ ok "models/best/best_model.zip exists ($(du -h models/best/best_model.zip | cut 
 
 # Results CSV
 if [[ ! -f "results/tables/test_metrics.csv" ]]; then
-    echo -e "${YELLOW}[WARN]${NC} results/tables/test_metrics.csv not found — check notebook 05 output"
+    warn "results/tables/test_metrics.csv not found — check notebook 05 output"
 else
     ok "results/tables/test_metrics.csv exists"
     echo ""
@@ -179,6 +179,6 @@ fi
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 echo "============================================================"
-echo -e "  ${GREEN}Reproducibility test PASSED${NC}"
+printf "  ${GREEN}Reproducibility test PASSED${NC}\n"
 echo "============================================================"
 echo ""
