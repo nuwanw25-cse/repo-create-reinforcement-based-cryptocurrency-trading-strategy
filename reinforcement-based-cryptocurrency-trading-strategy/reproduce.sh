@@ -130,7 +130,7 @@ done
 
 # ── 5. Execute notebooks ──────────────────────────────────────────────────────
 info "Step 5/6 — Executing notebooks (this may take several minutes) ..."
-mkdir -p results/figures results/tables
+mkdir -p results/figures results/tables results/logs
 
 NOTEBOOKS=(
     "notebooks/v2/01_data_exploration.ipynb"
